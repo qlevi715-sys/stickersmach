@@ -4,39 +4,27 @@ import Drawer from "expo-router/drawer";
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { FlatList } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FieldError } from "@/components/field-error";
 import { useCreateProduct } from "../src/products/viewmodels/use-create-product";
 
 export default function CreateProductScreen() {
 
   const router = useRouter();
   const {
-    name,
-    setName,
-    categoryId,
-    setCategoryId,
-    sku,
-    setSku,
-    description,
-    setDescription,
-    regularPrice,
-    setRegularPrice,
-    offerPrice,
-    setOfferPrice,
-    initialStock,
-    setInitialStock,
-    minStockAlert,
-    setMinStockAlert,
+    form,
     isLoadingProduct,
     errorMessage,
-    setErrorMessage,
     submitProduct,
     categories,
     isLoadingCategories,
     isCategoriesShowModal,
     setIsCategoriesShowModal,
-    selectedCategoryName,
-    setSelectedCategoryName
+    selectCategory,
+    selectedCategoryName
   } = useCreateProduct();
+
+  const { values, errors, onChange, onBlur } = form
+  const selectedCategoryId = values.categoryId ? Number(values.categoryId) : null
 
   return (
     <SafeAreaView style={styles.container}>
@@ -71,22 +59,30 @@ export default function CreateProductScreen() {
               <Text style={styles.cardTitle}>Informacion General</Text>
             </View>
 
+            {errorMessage && (
+              <View style={styles.serverError}>
+                <Text style={styles.serverErrorText}>{errorMessage}</Text>
+              </View>
+            )}
+
             {/* Input para el Nombre */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Nombre del producto</Text>
               <TextInput
                 placeholder="Ej. Zapato Nike"
-                style={styles.textInput}
-                value={name}
-                onChangeText={setName}
+                style={[styles.textInput, errors.name && styles.inputError]}
+                value={values.name}
+                onChangeText={onChange("name")}
+                onBlur={onBlur("name")}
               />
+              <FieldError message={errors.name} />
             </View>
 
             {/* Selector de Categoría */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Categoria</Text>
               <TouchableOpacity
-                style={styles.selectorInput}
+                style={[styles.selectorInput, errors.categoryId && styles.inputError]}
                 onPress={() => setIsCategoriesShowModal(true)}
               >
                 <Text>
@@ -97,12 +93,13 @@ export default function CreateProductScreen() {
                   size={20}
                 />
               </TouchableOpacity>
+              <FieldError message={errors.categoryId} />
             </View>
 
             {/* Campo SKU / Código de Barra */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>SKU / Codigo de Barra</Text>
-              <View style={styles.inputWithIcon}>
+              <View style={[styles.inputWithIcon, errors.sku && styles.inputError]}>
                 <MaterialCommunityIcons
                   name="barcode-scan"
                   size={20}
@@ -111,10 +108,14 @@ export default function CreateProductScreen() {
                 <TextInput
                   placeholder="PR-7878787878787"
                   style={styles.textInputScan}
-                  value={sku}
-                  onChangeText={setSku}
+                  value={values.sku}
+                  onChangeText={onChange("sku")}
+                  onBlur={onBlur("sku")}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
                 />
               </View>
+              <FieldError message={errors.sku} />
             </View>
 
             {/* Campo Descripción Detallada */}
@@ -126,12 +127,14 @@ export default function CreateProductScreen() {
                 numberOfLines={5}
                 textAlignVertical="top"
                 maxLength={2000}
-                style={styles.textAreaInput}
-                value={description}
-                onChangeText={setDescription}
+                style={[styles.textAreaInput, errors.description && styles.inputError]}
+                value={values.description}
+                onChangeText={onChange("description")}
+                onBlur={onBlur("description")}
               />
+              <FieldError message={errors.description} />
               <View style={styles.chartCounterDescription}>
-                <Text>{description.length}/2000</Text>
+                <Text>{values.description.length}/2000</Text>
               </View>
             </View>
 
@@ -151,57 +154,65 @@ export default function CreateProductScreen() {
             <View style={styles.rowCols}>
               <View style={styles.col}>
                 <Text style={styles.inputLabel}>Precio Regular</Text>
-                <View style={styles.inputPriceWrapper}>
+                <View style={[styles.inputPriceWrapper, errors.regularPrice && styles.inputError]}>
                   <Text style={{ marginRight: 6 }}>$</Text>
                   <TextInput
                     placeholder="0.0"
-                    keyboardType="numeric"
+                    keyboardType="decimal-pad"
                     style={styles.priceInput}
-                    value={regularPrice}
-                    onChangeText={setRegularPrice}
+                    value={values.regularPrice}
+                    onChangeText={onChange("regularPrice")}
+                    onBlur={onBlur("regularPrice")}
                   />
                 </View>
+                <FieldError message={errors.regularPrice} />
               </View>
               <View style={styles.col}>
                 <Text style={styles.inputLabel}>Precio Oferta</Text>
-                <View style={styles.inputPriceWrapper}>
+                <View style={[styles.inputPriceWrapper, errors.offerPrice && styles.inputError]}>
                   <Text style={{ marginRight: 6 }}>$</Text>
                   <TextInput
                     placeholder="0.0"
-                    keyboardType="numeric"
+                    keyboardType="decimal-pad"
                     style={styles.priceInput}
-                    value={offerPrice}
-                    onChangeText={setOfferPrice}
+                    value={values.offerPrice}
+                    onChangeText={onChange("offerPrice")}
+                    onBlur={onBlur("offerPrice")}
                   />
                 </View>
+                <FieldError message={errors.offerPrice} />
               </View>
             </View>
             <View style={styles.rowCols}>
               <View style={styles.col}>
                 <Text style={styles.inputLabel}>Stock Inicial</Text>
-                <View style={styles.inputPriceWrapper}>
-                  <Text style={{ marginRight: 6 }}>$</Text>
+                <View style={[styles.inputPriceWrapper, errors.initialStock && styles.inputError]}>
+                  <Feather name="package" size={16} color="#6B7280" style={{ marginRight: 6 }} />
                   <TextInput
                     placeholder="50"
-                    keyboardType="numeric"
+                    keyboardType="number-pad"
                     style={styles.priceInput}
-                    value={initialStock}
-                    onChangeText={setInitialStock}
+                    value={values.initialStock}
+                    onChangeText={onChange("initialStock")}
+                    onBlur={onBlur("initialStock")}
                   />
                 </View>
+                <FieldError message={errors.initialStock} />
               </View>
               <View style={styles.col}>
                 <Text style={styles.inputLabel}>Stock Minimo</Text>
-                <View style={styles.inputPriceWrapper}>
-                  <Text style={{ marginRight: 6 }}>$</Text>
+                <View style={[styles.inputPriceWrapper, errors.minStockAlert && styles.inputError]}>
+                  <Feather name="alert-triangle" size={16} color="#6B7280" style={{ marginRight: 6 }} />
                   <TextInput
                     placeholder="5"
-                    keyboardType="numeric"
+                    keyboardType="number-pad"
                     style={styles.priceInput}
-                    value={minStockAlert}
-                    onChangeText={setMinStockAlert}
+                    value={values.minStockAlert}
+                    onChangeText={onChange("minStockAlert")}
+                    onBlur={onBlur("minStockAlert")}
                   />
                 </View>
+                <FieldError message={errors.minStockAlert} />
               </View>
             </View>
             <TouchableOpacity
@@ -246,15 +257,11 @@ export default function CreateProductScreen() {
                     data={categories}
                     keyExtractor={(item) => item.id.toString()}
                     renderItem={({item}) => {
-                        const isSelected = item.id === categoryId
+                        const isSelected = item.id === selectedCategoryId
                         return (
                             <TouchableOpacity
                                 style={[styles.categoryOption, isSelected && styles.categoryOptionSelected]}
-                                onPress={() => {
-                                    setCategoryId(item.id)
-                                    setSelectedCategoryName(item.name)
-                                    setIsCategoriesShowModal(false)
-                                }}
+                                onPress={() => selectCategory(item)}
                             >
                                 <Text style={[styles.categoryOptionText, isSelected && styles.categoryOptionTextSelected]}>
                                     {item.name}
@@ -328,6 +335,23 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     marginBottom: 10,
+  },
+  inputError: {
+    borderColor: "#DC2626",
+  },
+  serverError: {
+    borderWidth: 1,
+    borderRadius: 8,
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FCA5A5",
+    marginBottom: 14,
+    padding: 12,
+  },
+  serverErrorText: {
+    fontSize: 14,
+    textAlign: "center",
+    color: "#DC2626",
+    fontWeight: "500",
   },
   inputLabel: {
     fontSize: 13,

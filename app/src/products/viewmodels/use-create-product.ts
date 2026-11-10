@@ -1,4 +1,15 @@
-import { useRouter } from "expo-router";
+import { useValidatedForm } from "@/hooks/use-validated-form";
+import { alertInvalidForm } from "@/utils/alerts";
+import {
+    filters,
+    validateDescription,
+    validateInteger,
+    validateOfferPrice,
+    validatePrice,
+    validateProductName,
+    validateRequiredSelection,
+    validateSku,
+} from "@/utils/validators";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 import { CategoryResponse, CategoryService } from "../../categories/services/category.service";
@@ -7,26 +18,58 @@ import { ProductItem } from "../models/product.model";
 import { ProductService } from "../services/product.services";
 
 export function useCreateProduct() {
-    const router = useRouter();
     const { token } = useAuth();
 
-    const [name, setName] = useState("")
-    const [categoryId, setCategoryId] = useState<null | number>(null)
     const [categories, setCategories] = useState<CategoryResponse[]>([])
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
     const [products, setProducts] = useState<ProductItem[]>([])
     const [isLoadingCategories, setIsLoadingCategories] = useState(false)
     const [isCategoriesShowModal, setIsCategoriesShowModal] = useState(false)
-    const [sku, setSku] = useState("")
-    const [description, setDescription] = useState("")
-    const [regularPrice, setRegularPrice] = useState("")
-    const [offerPrice, setOfferPrice] = useState("")
-    const [initialStock, setInitialStock] = useState("")
-    const [minStockAlert, setMinStockAlert] = useState("")
     const [isLoadingProduct, setIsLoadingProduct] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [selectedCategoryName, setSelectedCategoryName] = useState("")
     const [searchQuery, setSearchQuery] = useState("")
+
+    const form = useValidatedForm(
+        {
+            name: "",
+            categoryId: "",
+            sku: "",
+            description: "",
+            regularPrice: "",
+            offerPrice: "",
+            initialStock: "",
+            minStockAlert: "",
+        },
+        {
+            name: { filter: filters.productName, validate: (value) => validateProductName(value) },
+            categoryId: {
+                validate: (value) => validateRequiredSelection(value, "Selecciona una categoría.")
+            },
+            sku: { filter: filters.sku, validate: (value) => validateSku(value) },
+            description: {
+                validate: (value) => validateDescription(value, "La descripción", { required: false })
+            },
+            regularPrice: {
+                filter: filters.decimal,
+                validate: (value) => validatePrice(value, "El precio regular"),
+                // El precio de oferta depende del regular
+                revalidate: ["offerPrice"],
+            },
+            offerPrice: {
+                filter: filters.decimal,
+                validate: (value, values) => validateOfferPrice(value, values.regularPrice),
+            },
+            initialStock: {
+                filter: filters.integer,
+                validate: (value) => validateInteger(value, "El stock inicial"),
+            },
+            minStockAlert: {
+                filter: filters.integer,
+                validate: (value) => validateInteger(value, "El stock mínimo", { required: false }),
+            },
+        }
+    )
 
     useEffect(() => {
         if (token) {
@@ -72,9 +115,18 @@ export function useCreateProduct() {
         }
     }
 
+    /** Selecciona la categoría del formulario y cierra el modal. */
+    const selectCategory = (category: CategoryResponse) => {
+        form.onChange("categoryId")(String(category.id))
+        setSelectedCategoryName(category.name)
+        setIsCategoriesShowModal(false)
+    }
+
     const submitProduct = async () => {
-        if (!name.trim() || !sku.trim() || !regularPrice.trim() || !initialStock.trim()) {
-            setErrorMessage("Por favor completa los campos obligatorios")
+        setErrorMessage(null)
+
+        if (!form.validateAll()) {
+            alertInvalidForm()
             return
         }
 
@@ -83,10 +135,9 @@ export function useCreateProduct() {
             return
         }
 
-        setErrorMessage(null)
-        setIsLoadingProduct(true)
+        const { name, categoryId, sku, description, regularPrice, offerPrice, initialStock, minStockAlert } = form.values
 
-        console.log("PRODUCT ID", categoryId)
+        setIsLoadingProduct(true)
 
         try {
             await ProductService.createProduct(
@@ -102,9 +153,10 @@ export function useCreateProduct() {
                 },
                 token
             )
-            console.log("PRODUCTO CREADO", Response)
 
             Alert.alert("Exito", "Producto creado correctamente")
+            form.reset()
+            setSelectedCategoryName("")
 
         } catch (error: any) {
             console.error("Error al crear producto:", error);
@@ -126,26 +178,12 @@ export function useCreateProduct() {
     }, [products, searchQuery])
 
     return {
-        name,
-        setName,
+        form,
         categories,
         isLoadingCategories,
         isCategoriesShowModal,
         setIsCategoriesShowModal,
-        categoryId,
-        setCategoryId,
-        sku,
-        setSku,
-        description,
-        setDescription,
-        regularPrice,
-        setRegularPrice,
-        offerPrice,
-        setOfferPrice,
-        initialStock,
-        setInitialStock,
-        minStockAlert,
-        setMinStockAlert,
+        selectCategory,
         isLoadingProduct,
         errorMessage,
         setErrorMessage,
@@ -159,4 +197,4 @@ export function useCreateProduct() {
         selectedCategoryId,
         setSelectedCategoryId,
     }
-} 
+}

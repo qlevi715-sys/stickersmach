@@ -4,32 +4,40 @@ import Drawer from "expo-router/drawer";
 import { useState } from "react";
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FieldError } from "@/components/field-error";
+import { useValidatedForm } from "@/hooks/use-validated-form";
+import { alertInvalidForm } from "@/utils/alerts";
+import { filters, validateDescription, validateName } from "@/utils/validators";
 import { CategoryService } from "../src/categories/services/category.service";
 import { useAuth } from "../src/context/AuthContext";
 
 export default function InventoryScreen() {
   const router = useRouter();
   const { token } = useAuth()
-  const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
+  const { values, errors, onChange, onBlur, validateAll, reset } = useValidatedForm(
+    { name: "", description: "" },
+    {
+      name: { filter: filters.letters, validate: (value) => validateName(value, "El nombre de la categoría") },
+      description: { validate: (value) => validateDescription(value, "La descripción") },
+    }
+  )
+
   const handleSaveCategory = async () => {
-    if (!name.trim()) {
-      Alert.alert("Campo requerido", "Por favor ingrese el nombre de la categoria")
+    if (!validateAll()) {
+      alertInvalidForm()
       return
     }
-    if (!description.trim()) {
-      Alert.alert("Campo requerido", "Por favor ingrese la descripcion")
-      return
-    }
+
     if (!token) {
       Alert.alert("Error de sesion", "No se encontro el token")
       return
     }
 
+    setIsLoading(true)
     try {
-      const newCategory = await CategoryService.createCategory(name, description, token)
+      const newCategory = await CategoryService.createCategory(values.name.trim(), values.description.trim(), token)
 
       Alert.alert(
         "¡Categoría creada!",
@@ -38,8 +46,7 @@ export default function InventoryScreen() {
           {
             text: "Aceptar",
             onPress: () => {
-              setName("")
-              setDescription("")
+              reset()
               router.replace("/(protected)/dashboard")
             }
           }
@@ -89,11 +96,15 @@ export default function InventoryScreen() {
               <Text style={styles.inputLabel}>Nombre de la categoría</Text>
               <TextInput
                 placeholder="Ej. Dulcería"
-                style={styles.textInput}
-                value={name}
-                onChangeText={setName}
+                style={[styles.textInput, errors.name && styles.inputError]}
+                value={values.name}
+                onChangeText={onChange("name")}
+                onBlur={onBlur("name")}
                 editable={!isLoading}
+                autoCapitalize="words"
+                autoCorrect={false}
               />
+              <FieldError message={errors.name} />
             </View>
 
             <View style={styles.inputGroup}>
@@ -101,13 +112,16 @@ export default function InventoryScreen() {
               <TextInput
                 placeholder="Describe los productos que engloban esta categoría..."
                 multiline
-                value={description}
-                onChangeText={setDescription}
+                value={values.description}
+                onChangeText={onChange("description")}
+                onBlur={onBlur("description")}
                 editable={!isLoading}
                 numberOfLines={5}
                 textAlignVertical="top"
-                style={styles.textAreaInput}
+                maxLength={500}
+                style={[styles.textAreaInput, errors.description && styles.inputError]}
               />
+              <FieldError message={errors.description} />
             </View>
 
             {/* Botón Guardar */}
@@ -201,6 +215,9 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     marginBottom: 10,
+  },
+  inputError: {
+    borderColor: "#DC2626",
   },
   inputLabel: {
     fontSize: 13,

@@ -1,6 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Drawer } from "expo-router/drawer";
+import { FieldError } from "@/components/field-error";
+import { useValidatedForm } from "@/hooks/use-validated-form";
+import { alertInvalidForm } from "@/utils/alerts";
+import { filters, validateName, validatePhone } from "@/utils/validators";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,24 +15,33 @@ export default function ProfileScreen() {
   const router = useRouter();
   const {user, token, updateUserSession}=useAuth()
 
-  const [name, setName] = useState("")
-  const [lastname, setLastname] = useState("")
-  const [phone, setPhone] = useState("")
   const [isUpdating, setIsUpdating] = useState(false)
+
+  const { values, errors, onChange, onBlur, validateAll, reset } = useValidatedForm(
+    { name: "", lastname: "", phone: "" },
+    {
+      name: { filter: filters.letters, validate: (value) => validateName(value, "El nombre") },
+      lastname: { filter: filters.letters, validate: (value) => validateName(value, "El apellido") },
+      phone: { filter: filters.phone, validate: (value) => validatePhone(value) },
+    }
+  )
 
   useEffect(() => {
     if(user){
-      setName(user.name || "")
-      setLastname(user.lastName || "")
-      setPhone(user.phone || "")
+      reset({
+        name: user.name || "",
+        lastname: user.lastName || "",
+        phone: user.phone || "",
+      })
     }
-  }, [user])
+  }, [user, reset])
 
   const handleUpdateUser = async () => {
-    if (!name.trim() || !lastname.trim() || !phone.trim()) {
-        Alert.alert("Campos incompletos", "Por favor llenar los campos")
+    if (!validateAll()) {
+        alertInvalidForm()
         return
     }
+
     if (!user?.id || !token) {
         Alert.alert("Error de sesión", "No se encontró el usuario")
         return
@@ -38,9 +51,9 @@ export default function ProfileScreen() {
     try {
         const updateUser = await AuthService.updateUser(
             user.id,
-            name,
-            lastname,
-            phone,
+            values.name.trim(),
+            values.lastname.trim(),
+            values.phone.trim(),
             token
         )
         await updateUserSession(updateUser)
@@ -100,40 +113,50 @@ export default function ProfileScreen() {
           <Text style={styles.personalHeader}>Personal Information</Text>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>NAME</Text>
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
               <Ionicons style={styles.inputIcon} name="person-outline" size={20}/>
               <TextInput
                 placeholder="Full name"
                 style={styles.input}
-                value={name}
-                onChangeText={setName}
+                value={values.name}
+                onChangeText={onChange("name")}
+                onBlur={onBlur("name")}
+                autoCapitalize="words"
+                autoCorrect={false}
               />
             </View>
+            <FieldError message={errors.name} />
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>LAST NAME</Text>
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, errors.lastname && styles.inputError]}>
               <Ionicons style={styles.inputIcon} name="person-outline" size={20}/>
               <TextInput
-                placeholder="Lstname"
+                placeholder="Last name"
                 style={styles.input}
-                value={lastname}
-                onChangeText={setLastname}
+                value={values.lastname}
+                onChangeText={onChange("lastname")}
+                onBlur={onBlur("lastname")}
+                autoCapitalize="words"
+                autoCorrect={false}
               />
             </View>
+            <FieldError message={errors.lastname} />
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>PHONE NUMBER</Text>
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, errors.phone && styles.inputError]}>
               <Ionicons style={styles.inputIcon} name="call-outline" size={20}/>
               <TextInput
-                placeholder="Full name"
+                placeholder="6040-8574"
                 keyboardType="phone-pad"
                 style={styles.input}
-                value={phone}
-                onChangeText={setPhone}
+                value={values.phone}
+                onChangeText={onChange("phone")}
+                onBlur={onBlur("phone")}
               />
             </View>
+            <FieldError message={errors.phone} />
           </View>
 
             <TouchableOpacity
@@ -304,6 +327,9 @@ const styles = StyleSheet.create({
   },
   inputIcon:{
     marginRight:10
+  },
+  inputError:{
+    borderColor:"#DC2626"
   },
   updateButton:{
     flexDirection:"row",

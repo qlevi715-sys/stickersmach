@@ -1,3 +1,5 @@
+import { FieldError } from "@/components/field-error";
+import { PasswordInput } from "@/components/password-input";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
@@ -15,23 +17,14 @@ import { useRegister } from "../src/auth/viewmodels/use-register";
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const{
-    email,
-    lastName,
-    fullName,
-    password,
-    confirmPassword,
-    phone,
-    setEmail,
-    setLastName,
-    setFullName,
-    setPassword,
-    setConfirmPassword,
-    setPhone,
+  const {
+    form,
     handleRegister,
     errorMessage,
     isLoading
-  }= useRegister()
+  } = useRegister()
+
+  const { values, errors, onChange, onBlur } = form
 
   return (
     <KeyboardAvoidingView
@@ -41,85 +34,103 @@ export default function RegisterScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Create Account</Text>
 
+          {errorMessage && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          )}
+
           <Text style={styles.label}>Full name</Text>
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, errors.fullName && styles.inputError]}>
             <Feather name="user" size={20} color="#9CA3AF" />
             <TextInput
-              value={fullName}
-              onChangeText={setFullName}
-              style={{ flex: 1, height: "100%", marginLeft: 8 }}
+              value={values.fullName}
+              onChangeText={onChange("fullName")}
+              onBlur={onBlur("fullName")}
+              style={styles.input}
               placeholder="Levi"
+              autoCapitalize="words"
+              autoCorrect={false}
             />
           </View>
+          <FieldError message={errors.fullName} style={styles.fieldError} />
 
           <Text style={styles.label}>Last Name</Text>
-          <View style={styles.inputContainer}>
-          <Feather name="user" size={20} color="#9CA3AF" />
+          <View style={[styles.inputContainer, errors.lastName && styles.inputError]}>
+            <Feather name="user" size={20} color="#9CA3AF" />
             <TextInput
-            value={lastName}
-            onChangeText={setLastName}
-              style={{ flex: 1, height: "100%", marginLeft: 8 }}
+              value={values.lastName}
+              onChangeText={onChange("lastName")}
+              onBlur={onBlur("lastName")}
+              style={styles.input}
               placeholder="Hernandez"
+              autoCapitalize="words"
+              autoCorrect={false}
             />
           </View>
+          <FieldError message={errors.lastName} style={styles.fieldError} />
 
-           <Text style={styles.label}>Phone</Text>
-          <View style={styles.inputContainer}>
-          <Feather name="phone" size={20} color="#9CA3AF" />
+          <Text style={styles.label}>Phone</Text>
+          <View style={[styles.inputContainer, errors.phone && styles.inputError]}>
+            <Feather name="phone" size={20} color="#9CA3AF" />
             <TextInput
-            value={phone}
-            onChangeText={setPhone}
-              style={{ flex: 1, height: "100%", marginLeft: 8 }}
+              value={values.phone}
+              onChangeText={onChange("phone")}
+              onBlur={onBlur("phone")}
+              style={styles.input}
               placeholder="6040-8574"
+              keyboardType="phone-pad"
             />
           </View>
-          
+          <FieldError message={errors.phone} style={styles.fieldError} />
+
           <Text style={styles.label}>Email Address</Text>
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, errors.email && styles.inputError]}>
             <Feather name="mail" size={20} color="#9CA3AF" />
             <TextInput
-            value={email}
-            onChangeText={setEmail}
-              style={{ flex: 1, height: "100%", marginLeft: 8 }}
+              value={values.email}
+              onChangeText={onChange("email")}
+              onBlur={onBlur("email")}
+              style={styles.input}
               placeholder="Levi@email.com"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
+          <FieldError message={errors.email} style={styles.fieldError} />
 
           <Text style={styles.label}>Password</Text>
-          <View style={styles.inputContainer}>
-            <Feather name="lock" size={20} color="#9CA3AF" />
-            <TextInput
-            value={password}
-            onChangeText={setPassword}
-              style={{ flex: 1, height: "100%", marginLeft: 8 }}
-              placeholder="**************"
-              secureTextEntry={true}
-            />
-          </View>
+          <PasswordInput
+            value={values.password}
+            onChangeText={onChange("password")}
+            onBlur={onBlur("password")}
+            placeholder="**************"
+            hasError={!!errors.password}
+          />
+          <FieldError message={errors.password} style={styles.fieldError} />
 
           <Text style={styles.label}>Confirm Password</Text>
-          <View style={styles.inputContainer}>
-            <Feather name="shield" size={20} color="#9CA3AF" />
-            <TextInput
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-              style={{ flex: 1, height: "100%", marginLeft: 8 }}
-              placeholder="**************"
-              secureTextEntry={true}
-            />
-          </View>
+          <PasswordInput
+            leftIcon="shield"
+            value={values.confirmPassword}
+            onChangeText={onChange("confirmPassword")}
+            onBlur={onBlur("confirmPassword")}
+            placeholder="**************"
+            hasError={!!errors.confirmPassword}
+          />
+          <FieldError message={errors.confirmPassword} style={styles.fieldError} />
 
           {isLoading ? (
-            <ActivityIndicator size="large" color="#006C47"/>
-          ): (  
+            <ActivityIndicator size="large" color="#006C47" />
+          ) : (
             <TouchableOpacity style={styles.buttonRegister} onPress={handleRegister}>
-            <Text style={styles.buttonRegisterText}>Register</Text>
+              <Text style={styles.buttonRegisterText}>Register</Text>
             </TouchableOpacity>
           )}
 
@@ -180,6 +191,33 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     height: 50,
+  },
+  input: {
+    flex: 1,
+    height: "100%",
+    marginLeft: 8,
+  },
+  inputError: {
+    borderColor: "#DC2626",
+  },
+  // Los inputs tienen marginBottom 15: se sube el error para que quede pegado al campo
+  fieldError: {
+    marginTop: -10,
+    marginBottom: 12,
+  },
+  errorContainer: {
+    borderWidth: 1,
+    borderRadius: 8,
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FCA5A5",
+    marginBottom: 20,
+    padding: 12,
+  },
+  errorText: {
+    fontSize: 15,
+    textAlign: "center",
+    color: "#DC2626",
+    fontWeight: "500",
   },
   buttonRegister: {
     backgroundColor: "#006C47",

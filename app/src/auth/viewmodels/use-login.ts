@@ -1,50 +1,47 @@
-import { useRouter } from "expo-router";
+import { useValidatedForm } from "@/hooks/use-validated-form";
+import { alertInvalidForm } from "@/utils/alerts";
+import { filters, validateEmail, validateRequiredPassword } from "@/utils/validators";
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { AuthService } from "../services/auth.service";
 
-export function useLogin(){
-    const router = useRouter()
-    const {saveSession}=useAuth()
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
+export function useLogin() {
+    const { saveSession } = useAuth()
     const [isLoading, setIsLoading] = useState(false)
-    const [errorMessage, setErrorMessage] = useState<string|null>(null)
-    const [isPasswordVisible, setIsPasswordVisible] = useState(false)
-    console.log("EMAIL VALUE",email);
-    console.log("PASSWORD VALUE",password);
-    const togglePasswordVisibility=()=>{
-        setIsPasswordVisible((prev)=>!prev)
-    }
+    const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-    const handleLogin=async()=>{
-        if(!email || !password){
-            setErrorMessage("Please, complete all fields")
+    const form = useValidatedForm(
+        { email: "", password: "" },
+        {
+            email: { filter: filters.email, validate: (value) => validateEmail(value) },
+            password: { filter: filters.password, validate: (value) => validateRequiredPassword(value) },
+        }
+    )
+
+    const handleLogin = async () => {
+        setErrorMessage(null)
+        if (!form.validateAll()) {
+            alertInvalidForm()
             return
         }
-        setErrorMessage(null)
+
         setIsLoading(true)
 
         try {
-            const data = await AuthService.login(email,password)
-            await saveSession(data.token,data.userResponse)
+            const data = await AuthService.login(form.values.email.trim(), form.values.password)
+            await saveSession(data.token, data.userResponse)
 
-        } catch (error:any) {
+        } catch (error: any) {
             setErrorMessage(error.message)
-        }finally{
+        } finally {
             setIsLoading(false)
         }
     }
 
     return {
-        email,
-        password,
-        setEmail,
-        setPassword,
+        form,
         isLoading,
         errorMessage,
-        isPasswordVisible,
-        togglePasswordVisibility,
         handleLogin
     }
 }

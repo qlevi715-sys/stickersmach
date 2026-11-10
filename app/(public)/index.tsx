@@ -2,22 +2,19 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, } from "react-native";
+import { FieldError } from "@/components/field-error";
+import { PasswordInput } from "@/components/password-input";
 import { useLogin } from "../src/auth/viewmodels/use-login";
 
 export default function LoginScreen() {
 
   const router = useRouter()
   const {
-    email,
-    password,
-    setEmail,
-    setPassword,
+    form,
     isLoading,
     errorMessage,
-  isPasswordVisible,
-  togglePasswordVisibility,
-  handleLogin
-} =useLogin()
+    handleLogin
+  } = useLogin()
 
   return (
     <KeyboardAvoidingView
@@ -49,17 +46,20 @@ export default function LoginScreen() {
 
 
           <Text style={styles.label}>Email Address</Text>
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, form.errors.email && styles.inputError]}>
             <Feather name="mail" size={20} color="#9CA3AF" />
             <TextInput
               style={styles.input}
               placeholder="name@gmail.com"
               autoCapitalize="none"
+              autoCorrect={false}
               keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
+              value={form.values.email}
+              onChangeText={form.onChange("email")}
+              onBlur={form.onBlur("email")}
             />
           </View>
+          <FieldError message={form.errors.email} style={styles.fieldError} />
 
           <View style={styles.passwordRow}>
             <Text style={styles.label}>Password</Text>
@@ -67,25 +67,14 @@ export default function LoginScreen() {
               <Text style={styles.forgotPasswordLabel}>Forgot Password</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.inputContainer}>
-            <Feather name="lock" size={20} color="#9CA3AF" />
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              autoCapitalize="none"
-              placeholder="**************"
-              secureTextEntry={isPasswordVisible ?true:false}
-            />
-            <TouchableOpacity
-              onPress={togglePasswordVisibility}
-            >
-
-            <Feather name={isPasswordVisible ? "eye-off" : "eye"} size={20} color="#9CA3AF"/>
-
-            </TouchableOpacity>
-
-          </View>
+          <PasswordInput
+            value={form.values.password}
+            onChangeText={form.onChange("password")}
+            onBlur={form.onBlur("password")}
+            placeholder="**************"
+            hasError={!!form.errors.password}
+          />
+          <FieldError message={form.errors.password} style={styles.fieldError} />
           {isLoading ? (
             <ActivityIndicator size="large" color="#006C47" />
           ) : (
@@ -187,6 +176,16 @@ const styles = StyleSheet.create({
     flex: 1,
     height: "100%",
     marginLeft: 8,
+  },
+
+  inputError: {
+    borderColor: "#DC2626",
+  },
+
+  // Los inputs tienen marginBottom 15: se sube el error para que quede pegado al campo
+  fieldError: {
+    marginTop: -10,
+    marginBottom: 12,
   },
 
   passwordRow: {

@@ -1,0 +1,150 @@
+diff --git a/app/(protected)/inventory.tsx b/app/(protected)/inventory.tsx
+index f6a3ef3..d82ad84 100644
+--- a/app/(protected)/inventory.tsx
++++ b/app/(protected)/inventory.tsx
+@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, S
+ import { SafeAreaView } from "react-native-safe-area-context";
+ import { FieldError } from "@/components/field-error";
+ import { useValidatedForm } from "@/hooks/use-validated-form";
++import { alertInvalidForm } from "@/utils/alerts";
+ import { filters, validateDescription, validateName } from "@/utils/validators";
+ import { CategoryService } from "../src/categories/services/category.service";
+ import { useAuth } from "../src/context/AuthContext";
+@@ -24,7 +25,10 @@ export default function InventoryScreen() {
+   )
+ 
+   const handleSaveCategory = async () => {
+-    if (!validateAll()) return
++    if (!validateAll()) {
++      alertInvalidForm()
++      return
++    }
+ 
+     if (!token) {
+       Alert.alert("Error de sesion", "No se encontro el token")
+diff --git a/app/(protected)/profile.tsx b/app/(protected)/profile.tsx
+index d2e2b70..d8e512e 100644
+--- a/app/(protected)/profile.tsx
++++ b/app/(protected)/profile.tsx
+@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
+ import { Drawer } from "expo-router/drawer";
+ import { FieldError } from "@/components/field-error";
+ import { useValidatedForm } from "@/hooks/use-validated-form";
++import { alertInvalidForm } from "@/utils/alerts";
+ import { filters, validateName, validatePhone } from "@/utils/validators";
+ import { useEffect, useState } from "react";
+ import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+@@ -36,7 +37,10 @@ export default function ProfileScreen() {
+   }, [user, reset])
+ 
+   const handleUpdateUser = async () => {
+-    if (!validateAll()) return
++    if (!validateAll()) {
++        alertInvalidForm()
++        return
++    }
+ 
+     if (!user?.id || !token) {
+         Alert.alert("Error de sesión", "No se encontró el usuario")
+diff --git a/app/src/auth/viewmodels/use-login.ts b/app/src/auth/viewmodels/use-login.ts
+index 328f8f6..bc9ffab 100644
+--- a/app/src/auth/viewmodels/use-login.ts
++++ b/app/src/auth/viewmodels/use-login.ts
+@@ -1,4 +1,5 @@
+ import { useValidatedForm } from "@/hooks/use-validated-form";
++import { alertInvalidForm } from "@/utils/alerts";
+ import { filters, validateEmail, validateRequiredPassword } from "@/utils/validators";
+ import { useState } from "react";
+ import { useAuth } from "../../context/AuthContext";
+@@ -19,7 +20,10 @@ export function useLogin() {
+ 
+     const handleLogin = async () => {
+         setErrorMessage(null)
+-        if (!form.validateAll()) return
++        if (!form.validateAll()) {
++            alertInvalidForm()
++            return
++        }
+ 
+         setIsLoading(true)
+ 
+diff --git a/app/src/auth/viewmodels/use-register.ts b/app/src/auth/viewmodels/use-register.ts
+index 128f033..28d8f2c 100644
+--- a/app/src/auth/viewmodels/use-register.ts
++++ b/app/src/auth/viewmodels/use-register.ts
+@@ -1,4 +1,5 @@
+ import { useValidatedForm } from "@/hooks/use-validated-form";
++import { alertInvalidForm } from "@/utils/alerts";
+ import {
+     filters,
+     validateConfirmPassword,
+@@ -9,6 +10,7 @@ import {
+ } from "@/utils/validators";
+ import { useRouter } from "expo-router";
+ import { useState } from "react";
++import { Alert } from "react-native";
+ import { AuthService } from "../services/auth.service";
+ 
+ export function useRegister() {
+@@ -45,7 +47,10 @@ export function useRegister() {
+ 
+     const handleRegister = async () => {
+         setErrorMessage(null)
+-        if (!form.validateAll()) return
++        if (!form.validateAll()) {
++            alertInvalidForm()
++            return
++        }
+ 
+         const { fullName, lastName, phone, email, password } = form.values
+         setIsLoading(true)
+@@ -58,7 +63,11 @@ export function useRegister() {
+                 email.trim(),
+                 password
+             )
+-            router.replace("/(public)")
++            Alert.alert(
++                "¡Registro exitoso!",
++                "Tu cuenta fue creada correctamente. Ahora puedes iniciar sesión.",
++                [{ text: "Aceptar", onPress: () => router.replace("/(public)") }]
++            )
+         } catch (error: any) {
+             setErrorMessage(error.message)
+         } finally {
+diff --git a/app/src/products/viewmodels/use-create-product.ts b/app/src/products/viewmodels/use-create-product.ts
+index 7282962..21797ec 100644
+--- a/app/src/products/viewmodels/use-create-product.ts
++++ b/app/src/products/viewmodels/use-create-product.ts
+@@ -1,4 +1,5 @@
+ import { useValidatedForm } from "@/hooks/use-validated-form";
++import { alertInvalidForm } from "@/utils/alerts";
+ import {
+     filters,
+     validateDescription,
+@@ -124,7 +125,10 @@ export function useCreateProduct() {
+     const submitProduct = async () => {
+         setErrorMessage(null)
+ 
+-        if (!form.validateAll()) return
++        if (!form.validateAll()) {
++            alertInvalidForm()
++            return
++        }
+ 
+         if (!token) {
+             setErrorMessage("Sesion no valida")
+diff --git a/utils/alerts.ts b/utils/alerts.ts
+new file mode 100644
+index 0000000..90530eb
+--- /dev/null
++++ b/utils/alerts.ts
+@@ -0,0 +1,9 @@
++import { Alert } from "react-native";
++
++/** Alerta que se muestra cuando el usuario intenta enviar un formulario con datos inválidos. */
++export function alertInvalidForm() {
++  Alert.alert(
++    "Datos inválidos",
++    "Revisa los campos marcados en rojo y corrige los errores antes de continuar."
++  );
++}
